@@ -37,6 +37,10 @@ window.__ModuleLoader__.load({
         tools: '工具调用',
         target: '导入到',
         targetHint: '目标工作目录（决定它出现在对方的哪个项目里）',
+        targetWorkspace: '导入到哪个工作区',
+        targetProject: '导入到哪个项目',
+        customPath: '自定义路径…',
+        pickTarget: '先选择目标',
         doImport: '开始导入',
         importing: '导入中…',
         done: '已导入',
@@ -71,6 +75,10 @@ window.__ModuleLoader__.load({
         tools: 'Tool calls',
         target: 'Import into',
         targetHint: 'Target working directory — decides which project it lands in',
+        targetWorkspace: 'Workspace to import into',
+        targetProject: 'Project to import into',
+        customPath: 'Custom path…',
+        pickTarget: 'Choose a target first',
         doImport: 'Import',
         importing: 'Importing…',
         done: 'Imported',
@@ -206,6 +214,7 @@ window.__ModuleLoader__.load({
       const [busy, setBusy] = React.useState(false);
       const [notice, setNotice] = React.useState(null);
       const [target, setTarget] = React.useState('');
+      const [customTarget, setCustomTarget] = React.useState(false);
 
       const load = React.useCallback(async () => {
         try {
@@ -226,7 +235,10 @@ window.__ModuleLoader__.load({
         setSelected({ adapter, id: row.id, row });
         setDetail(null);
         setDetailBusy(true);
-        setTarget(row.cwd || '');
+        const map = DIRECTION[direction];
+        const targets = (data?.groups?.[map.target] ?? []).filter((group) => group.path).map((group) => group.path);
+        setTarget(targets.includes(row.cwd) ? row.cwd : (targets[0] ?? ''));
+        setCustomTarget(!targets.includes(row.cwd) && targets.length === 0);
         setNotice(null);
         try {
           const response = await fetch('/agent-bridge/preview', {
@@ -251,16 +263,21 @@ window.__ModuleLoader__.load({
           const response = await fetch('/agent-bridge/migrate', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-              adapter: map.source,
-              sessionId: selected.id,
-              to: map.target,
-              cwd: target || selected.row.cwd,
-            }),
+            body: JSON.stringify(
+              map.target === 'dsh'
+                ? { adapter: map.source, sessionId: selected.id, to: 'dsh', workspacePath: target }
+                : { adapter: map.source, sessionId: selected.id, to: 'codex', cwd: target },
+            ),
           });
           const result = await response.json();
           if (result.ok) {
-            setNotice({ kind: 'ok', text: `${t('done')} · ${result.to.file ?? result.to.id}` , backup: result.to.backup });
+            const workspace = result.workspace;
+            const suffix = workspace?.restartRequired
+              ? lang === 'zh'
+                ? '（重启 DSH 后出现在侧边栏）'
+                : ' (restart DSH to see it in the sidebar)'
+              : '';
+            setNotice({ kind: 'ok', text: `${t('done')}${suffix} · ${result.to.file ?? result.to.id}`, backup: result.to.backup });
             await load();
           } else {
             setNotice({
@@ -444,23 +461,66 @@ window.__ModuleLoader__.load({
                 h(
                   'div',
                   { style: { marginTop: 20 } },
-                  h('div', { style: { fontSize: 12, color: T.dim, marginBottom: 5 } }, t('target')),
-                  h('input', {
-                    value: target,
-                    onChange: (event) => setTarget(event.target.value),
-                    style: {
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      padding: '8px 11px',
-                      borderRadius: 9,
-                      border: `1px solid ${T.border}`,
-                      background: 'transparent',
-                      color: T.text,
-                      fontSize: 12.5,
-                      fontFamily: 'inherit',
-                      outline: 'none',
-                    },
-                  }),
+                  h(
+                    'div',
+                    { style: { fontSize: 12, color: T.dim, marginBottom: 5 } },
+                    map.target === 'dsh' ? t('targetWorkspace') : t('targetProject'),
+                  ),
+                  (() => {
+                    const options = (data.groups?.[map.target] ?? [])
+                      .filter((group) => group.path)
+                      .map((group) => ({ value: group.path, label: `${group.label} — ${shortPath(group.path)}` }));
+                    const known = options.some((option) => option.value === target);
+                    return h(
+                      'select',
+                      {
+                        value: known ? target : '__custom__',
+                        onChange: (event) => {
+                          if (event.target.value === '__custom__') {
+                            setCustomTarget(true);
+                            return;
+                          }
+                          setCustomTarget(false);
+                          setTarget(event.target.value);
+                        },
+                        style: {
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          padding: '8px 11px',
+                          borderRadius: 9,
+                          border: `1px solid ${T.border}`,
+                          background: 'var(--dsw-alias-bg-layer-1, #1a1a1a)',
+                          color: T.text,
+                          fontSize: 12.5,
+                          fontFamily: 'inherit',
+                          outline: 'none',
+                        },
+                      },
+                      !known && !customTarget ? h('option', { value: '__custom__' }, t('customPath')) : null,
+                      options.map((option) => h('option', { key: option.value, value: option.value }, option.label)),
+                      h('option', { value: '__custom__' }, t('customPath')),
+                    );
+                  })(),
+                  customTarget
+                    ? h('input', {
+                        value: target,
+                        onChange: (event) => setTarget(event.target.value),
+                        placeholder: '/absolute/path',
+                        style: {
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          marginTop: 6,
+                          padding: '8px 11px',
+                          borderRadius: 9,
+                          border: `1px solid ${T.border}`,
+                          background: 'transparent',
+                          color: T.text,
+                          fontSize: 12.5,
+                          fontFamily: 'inherit',
+                          outline: 'none',
+                        },
+                      })
+                    : null,
                   h('div', { style: { marginTop: 5, fontSize: 11, color: T.dim } }, t('targetHint')),
                 ),
                 h(
@@ -468,7 +528,7 @@ window.__ModuleLoader__.load({
                   { style: { marginTop: 16, display: 'flex', alignItems: 'center', gap: 12 } },
                   h(
                     'button',
-                    { type: 'button', disabled: busy, onClick: runImport, style: { ...buttonStyle(true), opacity: busy ? 0.6 : 1 } },
+                    { type: 'button', disabled: busy || !target, onClick: runImport, style: { ...buttonStyle(true), opacity: busy ? 0.6 : 1 } },
                     busy ? t('importing') : t('doImport'),
                   ),
                   notice

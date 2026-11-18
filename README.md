@@ -139,8 +139,12 @@ node bin/asb.mjs doctor
 
 ## Known limitations
 
+- **A DSH target must be an existing workspace.** DSH builds its sidebar from the
+  Workspace registry, not from a directory scan, and rejects a session whose
+  `cwd` is not a workspace path. The panel lists workspaces for this reason; a
+  custom path that is not a workspace will produce an invisible session.
 - A newly written session appears in the target app's sidebar only after that
-  app restarts; both harnesses list sessions at startup.
+  app restarts; both harnesses read their registries at startup.
 - Codex's `source` / `model_provider` columns are `NOT NULL` and only accept
   values Codex itself writes, so imported rows carry `vscode` / `openai`. The
   conversation content is the imported one.

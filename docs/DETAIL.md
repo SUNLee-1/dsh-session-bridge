@@ -16,6 +16,12 @@ DeepSeek Harness and Codex. Open it from the icon at the bottom of the sidebar.
 4. **Import** — creates one new session in the other harness. Nothing existing
    is rewritten.
 
+A DSH target must be an existing **workspace**, not an arbitrary folder: DSH
+renders its sidebar from the Workspace registry (`workspace.json`), not from a
+directory scan, and validates membership as `realpath(header.cwd) === workspace.path`.
+The panel therefore offers a workspace picker, writes the log at that path, and
+registers the session id in the registry. The session appears after DSH restarts.
+
 ## What each direction writes
 
 | Direction | Writes | Safety |

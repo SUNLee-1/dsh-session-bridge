@@ -6,7 +6,8 @@
  */
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { tree, preview, migrate, verifyDshLog, readLedger, loadAdapters } from './lib/engine.mjs';
+import { tree, preview, migrate, verifyDshLog, readLedger, loadAdapters, listAll, summarize } from './lib/engine.mjs';
+import { readWorkspaceDoc, addSessionToWorkspace } from './lib/dsh-path.mjs';
 import { drift } from './lib/dsh-schema.mjs';
 import { installedPackage } from './lib/install.mjs';
 import fs from 'node:fs';
@@ -72,6 +73,52 @@ async function readBody(req, limit = 64 * 1024) {
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
 
+/**
+ * DSH renders the sidebar from the Workspace registry, not from a directory
+ * scan: a session file on disk is invisible until a Workspace accounts for it,
+ * and membership is validated against `realpath(header.cwd) === workspace.path`.
+ * Attach through the live service so no restart is needed.
+ */
+async function attachSession(ctx, sessionId, workspacePath) {
+  const workspaces = ctx.get?.('workspaceController');
+  if (!workspaces) return { attached: false, reason: 'workspace service unavailable' };
+  try {
+    let workspaceId;
+    const doc = readWorkspaceDoc();
+    for (const [id, value] of Object.entries(doc?.tables?.workspaces ?? {})) {
+      if (value.path === workspacePath) {
+        workspaceId = id;
+        break;
+      }
+    }
+    let created = false;
+    if (!workspaceId) {
+      const result = await workspaces.create({ path: workspacePath });
+      workspaceId = result.workspace.workspaceId;
+      created = result.created;
+    }
+    await workspaces.insertSessionBefore({ workspaceId, sessionId });
+    return { attached: true, workspaceId, workspaceCreated: created, restartRequired: false };
+  } catch (error) {
+    // The live service can only move an already-accounted session. Register it
+    // in the registry file instead; the next start picks it up.
+    try {
+      const disk = addSessionToWorkspace({ workspacePath, sessionId });
+      if (disk.ok) {
+        return {
+          attached: false,
+          registeredOnDisk: true,
+          restartRequired: true,
+          reason: String(error?.message ?? error),
+        };
+      }
+      return { attached: false, reason: String(error?.message ?? error) };
+    } catch (fallbackError) {
+      return { attached: false, reason: String(fallbackError?.message ?? fallbackError) };
+    }
+  }
+}
+
 /** Everything the panel renders, in one round trip. */
 async function state() {
   const { groups, summary } = await tree();
@@ -120,6 +167,9 @@ export async function apply(ctx) {
         try {
           const body = await readBody(req);
           const result = await migrate(body);
+          if (result.ok && !result.dryRun && body.to !== 'codex') {
+            result.workspace = await attachSession(ctx, result.to.sessionId, body.workspacePath ?? body.cwd);
+          }
           send(res, result.ok ? 200 : 409, result);
         } catch (error) {
           send(res, 500, { error: String(error?.message ?? error) });
@@ -186,6 +236,7 @@ export async function apply(ctx) {
         sessionId: { type: 'string', description: 'Source session id for migrate.' },
         to: { type: 'string', description: 'Target adapter id for migrate, e.g. dsh.' },
         cwd: { type: 'string', description: 'Working directory for the imported session; defaults to the source cwd.' },
+        workspacePath: { type: 'string', description: 'DSH workspace path to attach the session to. Must be an existing workspace path, or one is created.' },
         dryRun: { type: 'boolean', description: 'Report the plan without writing.' },
         mode: { type: 'string', description: 'Target install mode: direct or staging (default direct for Codex targets).' },
         file: { type: 'string', description: 'Session log path for verify.' },
@@ -213,14 +264,20 @@ export async function apply(ctx) {
               truncated: rows.length > limit,
             };
           }
-          case 'migrate':
-            return migrate({
+          case 'migrate': {
+            const result = await migrate({
               adapter: args.adapter,
               sessionId: args.sessionId,
               to: args.to,
               cwd: args.cwd,
+              workspacePath: args.workspacePath,
               dryRun: args.dryRun === true,
             });
+            if (result.ok && !result.dryRun && args.to !== 'codex') {
+              result.workspace = await attachSession(ctx, result.to.sessionId, args.workspacePath ?? args.cwd);
+            }
+            return result;
+          }
           case 'preview':
             return preview({ adapter: args.adapter, sessionId: args.sessionId });
           case 'verify':
