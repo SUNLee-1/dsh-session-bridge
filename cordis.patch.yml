@@ -1,4 +1,11 @@
 - insert:
-    - id: agent-session-bridge
+    - id: dsh-session-bridge
       name: 'dsh-session-bridge'
-      config: {}
+      config:
+        bridge:
+          # One shared folder becomes a DSH Workspace and a Codex Project, so
+          # every migration lands somewhere predictable.
+          enabled: true
+          # Empty means "<home>/Session Bridge".
+          path: ''
+          name: 'Session Bridge'

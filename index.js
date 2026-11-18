@@ -8,6 +8,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { tree, preview, migrate, verifyDshLog, readLedger, loadAdapters, listAll, summarize } from './lib/engine.mjs';
 import { readWorkspaceDoc, addSessionToWorkspace } from './lib/dsh-path.mjs';
+import { ensureBridge, bridgeConfig } from './lib/bridge.mjs';
 import { drift } from './lib/dsh-schema.mjs';
 import { installedPackage } from './lib/install.mjs';
 import fs from 'node:fs';
@@ -73,6 +74,26 @@ async function readBody(req, limit = 64 * 1024) {
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
 
+let bridge = { at: 0, value: undefined, config: undefined };
+
+/**
+ * Create the shared bridge project on both sides once per activation, and retry
+ * while the workspace service is still starting.
+ */
+async function ensureBridgeOnce(ctx, config) {
+  const cfg = bridgeConfig(config ?? bridge.config ?? {});
+  bridge.config = config ?? bridge.config ?? {};
+  if (!cfg.enabled) return { enabled: false };
+  const fresh = bridge.value && Date.now() - bridge.at < 30_000 && bridge.value.dsh?.restartRequired === false;
+  if (fresh) return bridge.value;
+  try {
+    bridge = { at: Date.now(), value: await ensureBridge({ ctx, config: bridge.config }), config: bridge.config };
+  } catch (error) {
+    bridge = { at: Date.now(), value: { enabled: true, dir: cfg.dir, name: cfg.name, error: String(error?.message ?? error) }, config: bridge.config };
+  }
+  return bridge.value;
+}
+
 /**
  * DSH renders the sidebar from the Workspace registry, not from a directory
  * scan: a session file on disk is invisible until a Workspace accounts for it,
@@ -120,8 +141,9 @@ async function attachSession(ctx, sessionId, workspacePath) {
 }
 
 /** Everything the panel renders, in one round trip. */
-async function state() {
+async function state(ctx) {
   const { groups, summary } = await tree();
+  const bridgeInfo = await ensureBridgeOnce(ctx);
   const adapters = [...(await loadAdapters()).values()].map((adapter) => ({
     id: adapter.id,
     label: adapter.label,
@@ -133,10 +155,12 @@ async function state() {
     summary,
     ledger: readLedger().entries.slice(0, 20),
     schema: drift(baseline),
+    bridge: bridgeInfo,
   };
 }
 
-export async function apply(ctx) {
+export async function apply(ctx, config) {
+  ensureBridgeOnce(ctx, config).catch(() => {});
   const origin = ctx.webServer.getOrigin?.();
 
   ctx.effect(() =>
@@ -148,7 +172,7 @@ export async function apply(ctx) {
         if (deny) return send(res, 403, { error: deny });
         if (req.method !== 'GET') return send(res, 405, { error: 'GET only' });
         try {
-          send(res, 200, await state());
+          send(res, 200, await state(ctx));
         } catch (error) {
           send(res, 500, { error: String(error?.message ?? error) });
         }
@@ -225,12 +249,12 @@ export async function apply(ctx) {
         'action=list shows sessions grouped by project; action=preview reports turn/message/tool counts; ' +
         'action=migrate imports one session (Codex targets are indexed after backing up the Codex index); ' +
         'action=verify checks a written DSH log; action=drift reports whether the installed DSH session ' +
-        'schema still matches this build’s baseline.',
+        'schema still matches this build’s baseline; action=init creates the shared bridge project on both sides.',
       parameters: {
         action: {
           type: 'string',
           required: true,
-          description: 'list | preview | migrate | verify | drift',
+          description: 'list | preview | migrate | verify | drift | init',
         },
         adapter: { type: 'string', description: 'Source adapter id for migrate, e.g. codex.' },
         sessionId: { type: 'string', description: 'Source session id for migrate.' },
@@ -282,6 +306,8 @@ export async function apply(ctx) {
             return preview({ adapter: args.adapter, sessionId: args.sessionId });
           case 'verify':
             return verifyDshLog(args.file);
+          case 'init':
+            return ensureBridgeOnce(ctx);
           case 'drift':
             return drift(baseline);
           default:

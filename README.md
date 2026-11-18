@@ -51,6 +51,35 @@ streamed source → writer; transcripts are never buffered whole.
 | Repeat listing (3 s TTL cache) | 0 ms |
 | Importing a 101-event conversation | 110 KB log, 2 zstd frames |
 
+## The bridge inbox
+
+On first activation the plugin creates **one folder that is both a DSH Workspace
+and a Codex Project**, so migrations have a predictable home instead of landing
+wherever the source folder happened to be:
+
+| | |
+|---|---|
+| Folder | `~/Session Bridge` (same real path on both sides) |
+| DSH | Workspace titled *Session Bridge* |
+| Codex | Project titled *Session Bridge*, first in the sidebar |
+
+Every import targets it by default, and the panel marks it **互通收件箱 / Bridge
+inbox**. Creation is idempotent, backs up the Codex index and UI state, and never
+touches existing projects.
+
+Change it in `cordis.patch.yml`:
+
+```yaml
+config:
+  bridge:
+    enabled: true
+    path: '~/Documents/My Bridge'   # empty = "<home>/Session Bridge"
+    name: 'My Bridge'
+```
+
+Or from the CLI: `node bin/asb.mjs init --path "~/Documents/My Bridge" --name "My Bridge"`
+(quit DSH first, or run `session_bridge action=init` from inside it).
+
 ## Install
 
 ### As a DeepSeek Harness plugin (gives you the panel)

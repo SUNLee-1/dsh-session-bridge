@@ -9,6 +9,7 @@ import { listAll, summarize, migrate, verifyDshLog, loadAdapters } from '../lib/
 import { drift } from '../lib/dsh-schema.mjs';
 import { installDir, electronBinary, codexHome, dshHome } from '../lib/install.mjs';
 import { hasNativeZstd } from '../lib/zstd.mjs';
+import { ensureBridge, bridgeConfig } from '../lib/bridge.mjs';
 import fs from 'node:fs';
 
 const baseline = JSON.parse(fs.readFileSync(new URL('../schema/baseline.json', import.meta.url), 'utf8'));
@@ -101,6 +102,30 @@ async function main(argv) {
       process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
       return result.ok ? 0 : 1;
     }
+    case 'init': {
+      const config = {
+        bridge: {
+          enabled: flags['no-dsh'] !== true && flags.disable !== true,
+          path: typeof flags.path === 'string' ? flags.path : '',
+          name: typeof flags.name === 'string' ? flags.name : '',
+        },
+      };
+      const target = bridgeConfig(config);
+      process.stdout.write(`bridge folder: ${target.dir}\n`);
+      const result = await ensureBridge({ config });
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      if (result.dsh?.restartRequired) {
+        process.stdout.write(
+          'DSH is not reachable from a plain shell, so the workspace was written to its registry.\n' +
+            'Quit DeepSeek Harness before running this, or run it from inside DSH, or the app may\n' +
+            'overwrite the registry. Restart DSH once for the workspace to appear.\n',
+        );
+      }
+      if (result.codex?.created) {
+        process.stdout.write('Codex must be restarted before the project appears.\n');
+      }
+      return result.enabled ? 0 : 1;
+    }
     case 'doctor': {
       const checks = [
         ['platform', `${process.platform} ${process.arch}`],
@@ -132,7 +157,8 @@ async function main(argv) {
           '              [--to dsh] [--cwd DIR] [--dry-run] [--force]\n' +
           '  asb verify <file>                       check a written DSH session log\n' +
           '  asb drift                               compare installed DSH schema with the baseline\n' +
-          '  asb doctor                              report what this machine can do\n',
+          '  asb doctor                              report what this machine can do\n' +
+          '  asb init [--path DIR] [--name NAME]     create the shared bridge project on both sides\n',
       );
       return command ? 2 : 0;
   }

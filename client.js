@@ -41,6 +41,7 @@ window.__ModuleLoader__.load({
         targetProject: '导入到哪个项目',
         customPath: '自定义路径…',
         pickTarget: '先选择目标',
+        inbox: '互通收件箱',
         doImport: '开始导入',
         importing: '导入中…',
         done: '已导入',
@@ -79,6 +80,7 @@ window.__ModuleLoader__.load({
         targetProject: 'Project to import into',
         customPath: 'Custom path…',
         pickTarget: 'Choose a target first',
+        inbox: 'Bridge inbox',
         doImport: 'Import',
         importing: 'Importing…',
         done: 'Imported',
@@ -237,7 +239,9 @@ window.__ModuleLoader__.load({
         setDetailBusy(true);
         const map = DIRECTION[direction];
         const targets = (data?.groups?.[map.target] ?? []).filter((group) => group.path).map((group) => group.path);
-        setTarget(targets.includes(row.cwd) ? row.cwd : (targets[0] ?? ''));
+        const inbox = data?.bridge?.dir;
+        const preferred = inbox && targets.includes(inbox) ? inbox : (targets.includes(row.cwd) ? row.cwd : (targets[0] ?? ''));
+        setTarget(preferred);
         setCustomTarget(!targets.includes(row.cwd) && targets.length === 0);
         setNotice(null);
         try {
@@ -371,6 +375,9 @@ window.__ModuleLoader__.load({
                       { style: { flex: '1 1 auto', minWidth: 0, fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
                       group.label,
                     ),
+                    data?.bridge?.dir && group.path === data.bridge.dir
+                      ? h('span', { style: { flex: '0 0 auto', fontSize: 10, color: T.brand, border: `1px solid ${T.brand}`, borderRadius: 999, padding: '0 6px' } }, t('inbox'))
+                      : null,
                     h('span', { style: { flex: '0 0 auto', fontSize: 11, color: T.dim } }, String(group.sessions.length)),
                   ),
                   open

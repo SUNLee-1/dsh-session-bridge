@@ -22,7 +22,10 @@ request; nothing is migrated in bulk and nothing existing is rewritten.
 
 ## Do it
 
-Both directions are supported: Codex → DSH and DSH → Codex.
+Both directions are supported: Codex → DSH and DSH → Codex. Imports land in the
+shared **bridge inbox** (one folder that is both a DSH Workspace and a Codex
+Project) unless the user picks another target. `action: init` creates or repairs
+that inbox on both sides.
 
 1. `session_bridge` `action: list`, then match the user's description to one row
    by title and `cwd`. Confirm the match when two rows are close.
