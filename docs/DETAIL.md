@@ -33,6 +33,21 @@ Both directions record the transfer in `~/.dsh/session-bridge/migrations.json`,
 so the same conversation reports as already migrated instead of being copied
 twice. `force` overrides that deliberately.
 
+## What DSH will not accept
+
+A structurally valid log can still be rejected on load. Three invariants are
+enforced by DSH's own validator, and the writer satisfies them explicitly:
+
+- a `tool/call` must be **advertised** as a `tool-call` content block of an
+  `assistant/message` in the same step; a bare `tool/call` event is corrupt
+- a step may not end with an advertised call **unresolved**; when the source
+  session has no result, an explicit isError result saying so is written
+- turns number `1..n`, and steps number `1..n` **inside each turn**; source
+  numbering is discarded and renumbered by the writer
+
+`verify` runs DSH's `assertReleasedV4Relationships` itself, so these are caught
+before the session is ever opened.
+
 ## Adapting to new versions
 
 DSH publishes required event fields in

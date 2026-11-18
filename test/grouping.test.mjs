@@ -15,9 +15,14 @@ test('sessions are bucketed by exact working directory', () => {
     ],
     'Ungrouped',
   );
-  assert.deepEqual(groups.map((group) => group.label), ['One', 'Ungrouped']);
-  assert.deepEqual(groups[0].sessions.map((row) => row.id), ['a', 'b']);
-  assert.deepEqual(groups[1].sessions.map((row) => row.id), ['c']);
+  // Empty projects are kept on purpose: a project is also a migration
+  // destination, and the bridge inbox starts empty.
+  assert.deepEqual(groups.map((group) => group.label).sort(), ['One', 'Two', 'Ungrouped']);
+  const one = groups.find((group) => group.label === 'One');
+  const loose = groups.find((group) => group.label === 'Ungrouped');
+  assert.equal(one.sessions.length, 2);
+  assert.equal(loose.sessions.length, 1);
+  assert.deepEqual(one.sessions.map((row) => row.id), ['a', 'b']);
 });
 
 test('duplicate project roots do not double count', () => {

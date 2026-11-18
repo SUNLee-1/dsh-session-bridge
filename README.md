@@ -153,6 +153,20 @@ Codex-side writes copy `state_N.sqlite` and `.codex-global-state.json` to
 `~/.dsh/session-bridge/migrations.json`, so repeating one reports `duplicate`
 instead of copying the conversation twice.
 
+## What DSH will not accept
+
+A session can be structurally perfect and still be rejected on load. The writer
+satisfies the three invariants DSH's validator enforces:
+
+- a `tool/call` must be advertised as a `tool-call` block of an `assistant/message`
+- a step must not end with an advertised call unresolved (a source session
+  without a result gets an explicit isError result saying so)
+- turns are `1..n` and steps are `1..n` inside each turn; source numbering is
+  discarded and renumbered
+
+`asb verify` runs DSH's own `assertReleasedV4Relationships`, so a bad log is
+caught before you ever open it.
+
 ## Extending to another agent
 
 Drop a module into `lib/adapters/local/` — see
