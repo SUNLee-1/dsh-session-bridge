@@ -36,6 +36,11 @@ sidebar by working directory. It persists the layout in
 (`thread_source = guardian_review`). Reading those keys is the difference between
 104 mixed rows and the 28 conversations you actually see.
 
+**It satisfies DSH's load-time invariants.** A structurally valid log can still
+be rejected: a `tool/call` must be advertised by an `assistant/message`, a step
+must not end with an unresolved call, and turns/steps must number 1..n. The
+writer does all three, and `asb verify` runs DSH's own validator.
+
 **It follows DSH's schema instead of hard-coding it.** Required fields for every
 session event are resolved at runtime from
 `<install>/docs/persistence-schema.json`, and `schema/baseline.json` records the
@@ -79,6 +84,8 @@ config:
 
 Or from the CLI: `node bin/asb.mjs init --path "~/Documents/My Bridge" --name "My Bridge"`
 (quit DSH first, or run `session_bridge action=init` from inside it).
+
+**Read it in Chinese:** [README.zh-CN.md](README.zh-CN.md)
 
 ## Install
 
