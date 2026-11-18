@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "会话互通",
+    "description": "在 DeepSeek Harness 与其它编程 agent 之间搬动会话。读取已安装的适配器，一次导入一个会话，只新增文件、不改动已有会话。",
+    "detail": "docs/DETAIL.md"
+  }
+}

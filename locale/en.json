@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Session bridge",
+    "description": "Move conversations between DeepSeek Harness and other coding agents. Reads every installed adapter, imports one session at a time, and only ever adds new files.",
+    "detail": "docs/DETAIL.md"
+  }
+}

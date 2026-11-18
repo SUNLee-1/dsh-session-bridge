@@ -1,0 +1,4 @@
+- insert:
+    - id: agent-session-bridge
+      name: 'dsh-session-bridge'
+      config: {}

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Session bridge">
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#0f172a"/>
+  <g fill="none" stroke="#7dd3fc" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 22h14M14 32h10M14 42h14"/>
+    <path d="M44 18v28"/>
+    <path d="M38.5 23.5 44 18l5.5 5.5"/>
+    <path d="M49.5 40.5 44 46l-5.5-5.5"/>
+  </g>
+</svg>

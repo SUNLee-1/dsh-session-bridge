@@ -1,0 +1,70 @@
+{
+  "name": "dsh-session-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Move coding-agent conversations between DeepSeek Harness and Codex, in either direction. DSH plugin, CLI and MCP server.",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "lib",
+    "schema",
+    "bin",
+    "mcp",
+    "skills",
+    "locale/*.json",
+    "docs",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-theme"
+      ]
+    }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:YOUR_GITHUB_NAME/dsh-session-bridge.git"
+  },
+  "homepage": "https://github.com/YOUR_GITHUB_NAME/dsh-session-bridge#readme",
+  "bugs": {
+    "url": "https://github.com/YOUR_GITHUB_NAME/dsh-session-bridge/issues"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "codex",
+    "session-migration",
+    "mcp",
+    "cli",
+    "agent"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "test": "node --test",
+    "doctor": "node bin/asb.mjs doctor"
+  },
+  "bin": {
+    "dsh-session-bridge": "bin/asb.mjs"
+  }
+}
