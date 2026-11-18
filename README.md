@@ -87,7 +87,7 @@ Or from the CLI: `node bin/asb.mjs init --path "~/Documents/My Bridge" --name "M
 Requires **DeepSeek Harness** and Node **22.0+** (bundled runtime is fine).
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_NAME/dsh-session-bridge.git
+git clone https://github.com/SUNLee-1/dsh-session-bridge.git
 ```
 
 Then in DSH: **Plugins → Add plugin → local directory**, and pick the cloned

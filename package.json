@@ -41,11 +41,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git@github.com:YOUR_GITHUB_NAME/dsh-session-bridge.git"
+    "url": "git+https://github.com/SUNLee-1/dsh-session-bridge.git"
   },
-  "homepage": "https://github.com/YOUR_GITHUB_NAME/dsh-session-bridge#readme",
+  "homepage": "https://github.com/SUNLee-1/dsh-session-bridge#readme",
   "bugs": {
-    "url": "https://github.com/YOUR_GITHUB_NAME/dsh-session-bridge/issues"
+    "url": "https://github.com/SUNLee-1/dsh-session-bridge/issues"
   },
   "keywords": [
     "deepseek-harness",
